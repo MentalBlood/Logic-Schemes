@@ -37,7 +37,7 @@ class Element
 		{
 			for (int i = 0; i < inputs_number; i++)
 			{
-				inputs.push_back(boolinter(0));
+				inputs.push_back(boolinter(false));
 				input_elements.push_back(NULL);
 			}
 			for (int i = 0; i < outputs_number; i++) outputs.push_back(boolinter(0));
@@ -74,7 +74,7 @@ class Element
 			for (int i = 0; i < inputs.size(); i++)
 			{
 				glVertex2f(x, border_y); glVertex2f(middle, border_y);
-				if (!input_elements[i])
+				if (!*inputs[i])
 				{
 					glVertex2f(x+x_size/4, border_y); glVertex2f(x+x_size/4, border_y - inputs_step);
 				}
@@ -84,10 +84,30 @@ class Element
 			border_y = y+outputs_step;
 			for (int i = 0; i < outputs.size(); i++)
 			{
+				if (!*outputs[i])
+				{
+					glVertex2f(middle+x_size/4, border_y); glVertex2f(middle+x_size/4, border_y - outputs_step);
+				}
 				glVertex2f(middle, border_y); glVertex2f(x + x_size, border_y);
 				border_y += outputs_step;
 			}
 			glEnd();
+		}
+
+		void change_empty_someput_value(double mouse_x, double mouse_y)
+		{
+			if (mouse_x < middle)
+			{
+				int input_number = int((mouse_y - y) / inputs_step);
+				if (*inputs[input_number]) *inputs[input_number] = false;
+				else *inputs[input_number] = true;
+			}
+			else
+			{
+				int output_number = int((mouse_y - y) / outputs_step);
+				if (*outputs[output_number]) *outputs[output_number] = false;
+				else *outputs[output_number] = true;
+			}
 		}
 };
 
@@ -161,6 +181,11 @@ void finish_adding_wire(Element *element, double mouse_x, double mouse_y)
 		wires.push_back(Wire(element, to_element, output_number, input_number)); //adding wire (graphics)
 		to_element->input_elements[input_number] = element;
 	}
+}
+
+void remove_wire(Element *element, double mouse_x, double mouse_y)
+{
+	
 }
 
 void RenderScene(void)

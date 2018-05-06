@@ -25,6 +25,7 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 					dragged_elements.push_back(&elements[i]);
 					elements[i].x_from_where_dragging = elements[i].x;
 					elements[i].y_from_where_dragging = elements[i].y;
+					break;
 				}
 		}
 		else	//realised
@@ -33,7 +34,13 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 	else
 	if (key == 1)	//middle mouse key
 	{
-
+		if (!realised)	//pressed
+		for (int i = 0; i < elements.size(); i++)
+			if (mouse_x > elements[i].x && mouse_x < elements[i].x + elements[i].x_size && mouse_y > elements[i].y && mouse_y < elements[i].y + elements[i].y_size)
+			{
+				elements[i].change_empty_someput_value(double(mouse_x), double(mouse_y));
+				break;
+			}
 	}
 	else	//right mouse key
 	{
@@ -41,14 +48,20 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 		{
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i].x && mouse_x < elements[i].x + elements[i].x_size && mouse_y > elements[i].y && mouse_y < elements[i].y + elements[i].y_size)
+				{
 					start_adding_wire(&elements[i], double(mouse_x), double(mouse_y));
+					break;
+				}
 		}
 		else	//realised
 		{
 			if (adding_wire)
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i].x && mouse_x < elements[i].x + elements[i].x_size && mouse_y > elements[i].y && mouse_y < elements[i].y + elements[i].y_size)
-					finish_adding_wire(&elements[i], mouse_x, mouse_y);
+				{
+					finish_adding_wire(&elements[i], double(mouse_x), double(mouse_y));
+					break;
+				}
 			adding_wire = false;
 		}
 	}
