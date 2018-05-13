@@ -1,13 +1,14 @@
+#include <iostream>
 #include <GL/freeglut.h>
-#include <time.h>
 #include <vector>
-#include <stdio.h>
-#include <math.h>
+#include <string.h>
+#include <cstdlib>
 
 using namespace std;
 
+#include "logic_functions.hpp"
 #include "engine.cpp"
-#include "logic_functions.h"
+#include "GUI.cpp"
 #include "keys.cpp"
 
 int main(int argc, char **argv)
@@ -19,17 +20,28 @@ int main(int argc, char **argv)
 	glutReshapeFunc(ChangeSize);
 	glutTimerFunc(dt, TimerFunction, 1);
 	SetupRC();
+	ChangeSize(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
 
-	//glutKeyboardFunc(key);
+	glutKeyboardFunc(key); setup_keys();
 	glutMouseFunc(mouse);
 	glutMotionFunc(dragging);
-	glutPassiveMotionFunc(motion);
-	//setup_keys();
+	//glutPassiveMotionFunc(motion);
 	
-	elements.push_back(Element(0, 0, 10, 20, 10, 1, AND));
-	elements.push_back(Element(0, 0, 14, 18, 5, 2, OR));
-	elements.push_back(Element(20, 30, 8, 15, 3, 4, OR));
+	//default (basic) functions	
+	Functions_Base default_functions_base;
+	default_functions_base.packs.push_back(Function::Functions_Pack((unsigned char *)"basic", Color(50, 50, 50), Color(255, 255, 255)));
+	default_functions_base.add_function((unsigned char*)"AND", AND, 2, 0, 1, 1, (unsigned char *)"basic");
+	default_functions_base.add_function((unsigned char*)"OR", OR, 2, 0, 1, 1, (unsigned char *)"basic");
+	default_functions_base.add_function((unsigned char*)"NOT", NOT, 1, 1, 1, 1, (unsigned char *)"basic");
+
+	//sample tab
+	tabs.push_back(Scheme());
+	active_tab = &tabs[0];
+
+	//elements panel
+	Elements_Panel default_panel(&default_functions_base);
+	active_panel = &default_panel;
 	
-	glutMainLoop();
+	glutMainLoop(); //start
 	return 0;
 }
