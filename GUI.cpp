@@ -273,7 +273,7 @@ class Elements_Panel
 				glEnd();
 
 				//name
-				unsigned char *c = functions_base->functions[i].name;
+				unsigned char *c = functions[i]->name;
 				while (*c) c++;
 				name_x = -windowWidth + (x_size - (c - functions[i]->name + 2)*9.0/glutGet(GLUT_WINDOW_WIDTH)*windowWidth)/2;
 				glRasterPos2f(name_x, down_side_y + name_y_margin); glutBitmapString(GLUT_BITMAP_9_BY_15, functions[i]->name);

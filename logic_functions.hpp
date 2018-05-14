@@ -21,7 +21,7 @@ void strcpy(unsigned char **dest, unsigned char **src)
 class Function
 {
 	public:
-		void (*evaluate)(vector<bool*> &, vector<bool*> &);
+		void (*evaluate)(vector<bool*> &, vector<bool> &);
 		unsigned char *name;
 		int max_inputs_number, max_outputs_number,
 			min_inputs_number, min_outputs_number;
@@ -40,7 +40,7 @@ class Function
 
 		Functions_Pack *pack;
 
-		Function(unsigned char *name_arg, void (*evaluate)(vector<bool*> &, vector<bool*> &), int min_inputs_number, int max_inputs_number, int min_outputs_number, int max_outputs_number, Functions_Pack *pack): 
+		Function(unsigned char *name_arg, void (*evaluate)(vector<bool*> &, vector<bool> &), int min_inputs_number, int max_inputs_number, int min_outputs_number, int max_outputs_number, Functions_Pack *pack): 
 			evaluate(evaluate), min_inputs_number(min_inputs_number), max_inputs_number(max_inputs_number), min_outputs_number(min_outputs_number), max_outputs_number(max_outputs_number), pack(pack)
 		{ strcpy(&name, &name_arg); }
 };
@@ -51,7 +51,7 @@ class Functions_Base
 		vector<Function::Functions_Pack> packs;
 		vector<Function> functions;
 
-		bool add_function(unsigned char *name_arg, void (*evaluate)(vector<bool*> &, vector<bool*> &), int min_inputs_number, int max_inputs_number, int min_outputs_number, int max_outputs_number, unsigned char *pack_name)
+		bool add_function(unsigned char *name_arg, void (*evaluate)(vector<bool*> &, vector<bool> &), int min_inputs_number, int max_inputs_number, int min_outputs_number, int max_outputs_number, unsigned char *pack_name)
 		{
 			for (int i = 0; i < packs.size(); i++)
 				if (!strcmp((char*)packs[i].name, (char*)pack_name))
@@ -100,35 +100,35 @@ class Functions_Base
 				if (inputs)
 					if ((functions[i].max_inputs_number && inputs > functions[i].max_inputs_number) || inputs < functions[i].min_inputs_number) continue;
 				if (outputs)
-					if ((functions[i].max_outputs_number && outputs > functions[i].max_outputs_number) || outputs < functions[i].min_inputs_number) continue;
+					if ((functions[i].max_outputs_number && outputs > functions[i].max_outputs_number) || outputs < functions[i].min_outputs_number) continue;
 				results.push_back(&functions[i]);
 			}
 		}
 };
 
-void AND(vector<bool*> &in, vector<bool*> &out)
+void AND(vector<bool*> &in, vector<bool> &out)
 {
 	for (int i = 0; i < in.size(); i++)
 		if (!*in[i])
 		{
-			*out[0] = 0;
+			out[0] = 0;
 			return;
 		}
-	*out[0] = 1;
+	out[0] = 1;
 }
 
-void OR(vector<bool*> &in, vector<bool*> &out)
+void OR(vector<bool*> &in, vector<bool> &out)
 {
 	for (int i = 0; i < in.size(); i++)
 		if (*in[i])
 		{
-			*out[0] = 1;
+			out[0] = 1;
 			return;
 		}
-	*out[0] = 0;
+	out[0] = 0;
 }
 
-void NOT(vector<bool*> &in, vector<bool*> &out)
+void NOT(vector<bool*> &in, vector<bool> &out)
 {
-	*out[0] = !*in[0];
+	out[0] = !*in[0];
 }

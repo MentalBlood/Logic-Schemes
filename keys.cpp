@@ -18,7 +18,8 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 	mouse_y = glutGet(GLUT_WINDOW_HEIGHT)/2 - mouse_y;
 	mouse_x = int(double(mouse_x)/4); mouse_y = int(double(mouse_y)/4);
 	
-	if (active_panel->press(mouse_x, mouse_y, key)) return; //check if press on panel
+	if (!realised)
+		if (active_panel->press(mouse_x, mouse_y, key)) return; //check if press on panel
 	
 	if (!key) //left mouse key
 	{
@@ -33,7 +34,7 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 	else
 	if (key == 2) //right mouse key
 	{
-		if (!realised) active_tab->try_to_add_wire(mouse_x, mouse_y); //pressed
+		if (!realised) active_tab->try_to_add_wire(mouse_x, mouse_y);
 		else //realised
 		{
 			if (adding_wire)

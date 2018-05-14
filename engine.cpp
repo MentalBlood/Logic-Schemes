@@ -21,26 +21,29 @@ class Element
 
 		typedef struct Wire
 		{
-				Element *from;
-				int output_number;
+				Element *to;
+				int input_number;
+				bool new_value;
 		} Wire;
 
 		double x, y, x_size, y_size, middle;
 		double inputs_step, outputs_step; //(graphics)
 		double x_from_where_dragging, y_from_where_dragging;
 		vector<bool*> inputs, outputs; //values
-		vector<Wire*> input_wires;
+		vector<bool> new_outputs;
+		vector<Wire*> output_wires;
 
 		Element(Function *function, double x, double y, double x_size, double y_size, int inputs_number, int outputs_number):
 			x(x), y(y), x_size(x_size), y_size(y_size), function(function)
 		{	
 			//filling inputs and outputs by zeros
-			for (int i = 0; i < inputs_number; i++)
+			for (int i = 0; i < outputs_number; i++)
 			{
-				inputs.push_back(boolinter(false));
-				input_wires.push_back(NULL);
+				outputs.push_back(boolinter(false));
+				new_outputs.push_back(false);
+				output_wires.push_back(NULL);
 			}
-			for (int i = 0; i < outputs_number; i++) outputs.push_back(boolinter(0));
+			for (int i = 0; i < inputs_number; i++) inputs.push_back(boolinter(0));
 
 			evaluated = false; //yet
 
@@ -49,17 +52,58 @@ class Element
 			middle = x + x_size/2;
 		}
 
-		void evaluate()
+		void evaluate_chain() //evaluate self and next elemenets which must be reevaluated
 		{
-			for (int i = 0; i < inputs.size(); i++)
-				if (input_wires[i]) //if there is an input wire
-					if (!input_wires[i]->from->evaluated) //and element on other side of it is not evaluated
-						input_wires[i]->from->evaluate(); //than evaluate it
-			function->evaluate(inputs, outputs); //evaluate self
+			if (evaluated) return;
+			function->evaluate(inputs, new_outputs); //evaluate self
+			evaluated = true;
+			vector<Element*> next_elements_wich_must_be_evaluated;
+			for (int i = 0; i < new_outputs.size(); i++)
+			{
+				if (output_wires[i] && (new_outputs[i] != *outputs[i])) //if there is an output wire and new value
+					next_elements_wich_must_be_evaluated.push_back(output_wires[i]->to); //then we must (re)evaluate element to which this wire is connected
+				*outputs[i] = new_outputs[i]; //remembering new output
+			}
+			//(re)evaluating next elements
+			for (int i = 0; i < next_elements_wich_must_be_evaluated.size(); i++) next_elements_wich_must_be_evaluated[i]->evaluate_chain();
 		}
+
+		void unevaluate() { evaluated = false; }
 
 		void draw()
 		{
+			//output wires
+			double from_x = x + x_size,
+				   from_y = y+outputs_step/2;
+			for (int i = 0; i < output_wires.size(); i++, from_y += outputs_step)
+			{
+				if (output_wires[i] == NULL) continue; //if there is no wire in this input
+				
+				//calculating from wich point we must draw the wire
+				double	to_x = output_wires[i]->to->x,
+						to_y = output_wires[i]->to->y + output_wires[i]->to->inputs_step*(double(output_wires[i]->input_number)+0.5);
+				
+				double	middle = (to_x + from_x) / 2; //where wire must turn and go vertically
+				
+				//background black line
+				glLineWidth(7);
+				glColor3ub(0, 0, 0);
+				glBegin(GL_LINES);
+				glVertex2f(to_x, to_y); glVertex2f(middle, to_y);
+				glVertex2f(middle, to_y); glVertex2f(middle, from_y);
+				glVertex2f(middle, from_y); glVertex2f(from_x, from_y);
+				glEnd();
+
+				//white line
+				glLineWidth(1);
+				glColor3ub(255, 255, 255);
+				glBegin(GL_LINES);
+				glVertex2f(to_x, to_y); glVertex2f(middle, to_y);
+				glVertex2f(middle, to_y); glVertex2f(middle, from_y);
+				glVertex2f(middle, from_y); glVertex2f(from_x, from_y);
+				glEnd();
+			}
+
 			//background
 			glColor3ub(function->pack->background_color.R, function->pack->background_color.G, function->pack->background_color.B);
 			glBegin(GL_QUADS);
@@ -104,37 +148,6 @@ class Element
 				border_y += outputs_step;
 			}
 			glEnd();
-
-			//input wires
-			double to_y = y+inputs_step/2;
-			for (int i = 0; i < input_wires.size(); i++, to_y += inputs_step)
-			{
-				if (input_wires[i] == NULL) continue; //if there is no wire in this input
-				
-				//calculating from wich point we must draw the wire
-				double	from_x = input_wires[i]->from->x + input_wires[i]->from->x_size,
-						from_y = input_wires[i]->from->y + input_wires[i]->from->outputs_step*(double(input_wires[i]->output_number)+0.5);
-				
-				double	middle = (from_x + x) / 2; //where wire must turn and go vertically
-				
-				//background black line
-				glLineWidth(7);
-				glColor3ub(0, 0, 0);
-				glBegin(GL_LINES);
-				glVertex2f(from_x, from_y); glVertex2f(middle, from_y);
-				glVertex2f(middle, from_y); glVertex2f(middle, to_y);
-				glVertex2f(middle, to_y); glVertex2f(x, to_y);
-				glEnd();
-
-				//white line
-				glLineWidth(1);
-				glColor3ub(255, 255, 255);
-				glBegin(GL_LINES);
-				glVertex2f(from_x, from_y); glVertex2f(middle, from_y);
-				glVertex2f(middle, from_y); glVertex2f(middle, to_y);
-				glVertex2f(middle, to_y); glVertex2f(x, to_y);
-				glEnd();
-			}
 		}
 
 		void draw_caption()
@@ -144,20 +157,17 @@ class Element
 			glutBitmapString(GLUT_BITMAP_8_BY_13, function->name);
 		}
 
-		void change_someput_value(double mouse_x, double mouse_y)
+		bool change_someput_value(double mouse_x, double mouse_y)
 		{
 			if (mouse_x < middle) //input
 			{
 				int input_number = int((mouse_y - y) / inputs_step);
 				if (*inputs[input_number]) *inputs[input_number] = false;
 				else *inputs[input_number] = true;
+				evaluate_chain();
+				return true;
 			}
-			else //output
-			{
-				int output_number = int((mouse_y - y) / outputs_step);
-				if (*outputs[output_number]) *outputs[output_number] = false;
-				else *outputs[output_number] = true;
-			}
+			return false;
 		}
 };
 
@@ -165,7 +175,7 @@ double x_where_mouse_was_pressed, y_where_mouse_was_pressed; //for dragging
 vector<Element*> dragged_elements; //(now)
 
 double Mouse_x, Mouse_y; //for drawing wire wich is just adding
-bool adding_wire = false; Element *to_element; int input_number; //is we adding wire to element to input with such number (now)
+bool adding_wire = false; Element *from_element; int output_number; //is we adding wire from element from output with such number (now)
 
 class Scheme
 {
@@ -178,6 +188,11 @@ class Scheme
 		Scheme(): captions_enabled(true)
 		{}
 
+		void unevaluate()
+		{
+			for (int i = 0; i < elements.size(); i++) elements[i]->unevaluate();
+		}
+
 		void add_element(Function *function, double x, double y, double x_size, double y_size, int inputs_number, int outputs_number, bool dragging)
 		{
 			Element **element;
@@ -188,7 +203,6 @@ class Scheme
 			(*element)->y_from_where_dragging = y;
 			if (dragging)
 			{
-				printf("dragging\n");
 				x_where_mouse_was_pressed = x;
 				y_where_mouse_was_pressed = y;
 				dragged_elements.push_back(*element);
@@ -197,31 +211,31 @@ class Scheme
 
 		void draw()
 		{
-			//elements
-			for (int i = 0; i < elements.size(); i++) elements[i]->draw();
-
 			//wire which is adding now
 			if (adding_wire)
 			{
-				double to_y = to_element->y + to_element->inputs_step*(input_number+0.5);
-				double middle = (Mouse_x + to_element->x) / 2;
+				double from_y = from_element->y + from_element->outputs_step*(output_number+0.5);
+				double middle = (Mouse_x + from_element->x) / 2;
 		
 				glLineWidth(7);
 				glColor3ub(0, 0, 0);
 				glBegin(GL_LINES);
 				glVertex2f(Mouse_x, Mouse_y); glVertex2f(middle, Mouse_y);
-				glVertex2f(middle, Mouse_y); glVertex2f(middle, to_y);
-				glVertex2f(middle, to_y); glVertex2f(to_element->x, to_y);
+				glVertex2f(middle, Mouse_y); glVertex2f(middle, from_y);
+				glVertex2f(middle, from_y); glVertex2f(from_element->x + from_element->x_size, from_y);
 				glEnd();
 
 				glLineWidth(1);
 				glColor3ub(255, 255, 255);
 				glBegin(GL_LINES);
 				glVertex2f(Mouse_x, Mouse_y); glVertex2f(middle, Mouse_y);
-				glVertex2f(middle, Mouse_y); glVertex2f(middle, to_y);
-				glVertex2f(middle, to_y); glVertex2f(to_element->x, to_y);
+				glVertex2f(middle, Mouse_y); glVertex2f(middle, from_y);
+				glVertex2f(middle, from_y); glVertex2f(from_element->x + from_element->x_size, from_y);
 				glEnd();
 			}
+
+			//elements
+			for (int i = 0; i < elements.size(); i++) elements[i]->draw();
 	
 			//captions
 			if (captions_enabled)
@@ -259,7 +273,7 @@ class Scheme
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
-					elements[i]->change_someput_value(mouse_x, mouse_y);
+					if (elements[i]->change_someput_value(mouse_x, mouse_y)) unevaluate();
 					break;
 				}
 		}
@@ -269,14 +283,16 @@ class Scheme
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
-					if (mouse_x > elements[i]->middle) //connecting wire to output
+					if (mouse_x < elements[i]->middle) //connecting wire to input
 					{
-						int output_number = int((mouse_y - elements[i]->y) / elements[i]->outputs_step);
+						int input_number = int((mouse_y - elements[i]->y) / elements[i]->inputs_step);
 		
-						free(to_element->inputs[input_number]); to_element->inputs[input_number] = elements[i]->outputs[output_number]; //connecting values	
-						to_element->input_wires[input_number] = new Element::Wire; //creating new wire structure
-						to_element->input_wires[input_number]->from = elements[i]; //filling it
-						to_element->input_wires[input_number]->output_number = output_number;
+						free(from_element->outputs[output_number]); from_element->outputs[output_number] = elements[i]->inputs[input_number]; //connecting values	
+						from_element->output_wires[output_number] = new Element::Wire; //creating new wire structure
+						from_element->output_wires[output_number]->to = elements[i]; //filling it
+						from_element->output_wires[output_number]->input_number = input_number;
+						from_element->evaluate_chain();
+						unevaluate();
 					}
 					return;
 				}
@@ -287,15 +303,15 @@ class Scheme
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
-					if (mouse_x < elements[i]->middle) //adding wire from input
+					if (mouse_x > elements[i]->middle) //adding wire from output
 					{
-						input_number = int((mouse_y - elements[i]->y) / elements[i]->inputs_step); //a bit of magic
-						if (elements[i]->input_wires[input_number]) //if wire alredy connected then removing it
+						output_number = int((mouse_y - elements[i]->y) / elements[i]->outputs_step); //a bit of magic
+						if (elements[i]->output_wires[output_number]) //if wire alredy connected then removing it
 						{
-							free(elements[i]->input_wires[input_number]); elements[i]->input_wires[input_number] = NULL; //deleting information about wire
-							elements[i]->inputs[input_number] = new bool; //disconnecting values
+							free(elements[i]->output_wires[output_number]); elements[i]->output_wires[output_number] = NULL; //deleting information about wire
+							elements[i]->outputs[output_number] = new bool; //disconnecting values
 						}
-						to_element = elements[i];
+						from_element = elements[i];
 						adding_wire = true;
 					}
 					return;
