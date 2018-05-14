@@ -353,6 +353,7 @@ void RenderScene(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 	active_tab->draw();
 	active_panel->draw();
+	if (active_tab->selecting_by_quad) active_tab->draw_selection_quad();
 	glutSwapBuffers();
 }
 

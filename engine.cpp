@@ -18,6 +18,7 @@ class Element
 
 	public:
 		Function *function;
+		bool selected;
 
 		typedef struct Wire
 		{
@@ -46,11 +47,16 @@ class Element
 			for (int i = 0; i < inputs_number; i++) inputs.push_back(boolinter(0));
 
 			evaluated = false; //yet
+			selected = false;
 
 			//calculating inputs and outputs steps and middle
 			inputs_step = y_size / inputs.size(); outputs_step = y_size / outputs.size();
 			middle = x + x_size/2;
 		}
+
+		void select() { selected = true; }
+		void unselect() { selected = false; }
+		void select_unselect() { if (selected) selected = false; else selected = true; }
 
 		void evaluate_chain() //evaluate self and next elemenets which must be reevaluated
 		{
@@ -70,37 +76,18 @@ class Element
 
 		void unevaluate() { evaluated = false; }
 
-		void draw()
+		void draw_self()
 		{
-			//output wires
-			double from_x = x + x_size,
-				   from_y = y+outputs_step/2;
-			for (int i = 0; i < output_wires.size(); i++, from_y += outputs_step)
+			//selection
+			glLineWidth(1);
+			if (selected)
 			{
-				if (output_wires[i] == NULL) continue; //if there is no wire in this input
-				
-				//calculating from wich point we must draw the wire
-				double	to_x = output_wires[i]->to->x,
-						to_y = output_wires[i]->to->y + output_wires[i]->to->inputs_step*(double(output_wires[i]->input_number)+0.5);
-				
-				double	middle = (to_x + from_x) / 2; //where wire must turn and go vertically
-				
-				//background black line
-				glLineWidth(7);
-				glColor3ub(0, 0, 0);
-				glBegin(GL_LINES);
-				glVertex2f(to_x, to_y); glVertex2f(middle, to_y);
-				glVertex2f(middle, to_y); glVertex2f(middle, from_y);
-				glVertex2f(middle, from_y); glVertex2f(from_x, from_y);
-				glEnd();
-
-				//white line
-				glLineWidth(1);
-				glColor3ub(255, 255, 255);
-				glBegin(GL_LINES);
-				glVertex2f(to_x, to_y); glVertex2f(middle, to_y);
-				glVertex2f(middle, to_y); glVertex2f(middle, from_y);
-				glVertex2f(middle, from_y); glVertex2f(from_x, from_y);
+				double margin = max(x_size/8, 2 + 15.0/glutGet(GLUT_WINDOW_HEIGHT)*windowHeight);
+				glColor3ub(30, 200, 30);
+				glBegin(GL_LINE_STRIP);
+				glVertex2f(x-margin, y-margin); glVertex2f(x+margin + x_size, y-margin);
+				glVertex2f(x+margin + x_size, y+margin + y_size); glVertex2f(x-margin, y+margin + y_size);
+				glVertex2f(x-margin, y-margin);
 				glEnd();
 			}
 
@@ -150,6 +137,41 @@ class Element
 			glEnd();
 		}
 
+		void draw_wires()
+		{
+			//output wires
+			double from_x = x + x_size,
+				   from_y = y+outputs_step/2;
+			for (int i = 0; i < output_wires.size(); i++, from_y += outputs_step)
+			{
+				if (output_wires[i] == NULL) continue; //if there is no wire in this input
+				
+				//calculating from wich point we must draw the wire
+				double	to_x = output_wires[i]->to->x,
+						to_y = output_wires[i]->to->y + output_wires[i]->to->inputs_step*(double(output_wires[i]->input_number)+0.5);
+				
+				double	middle = (to_x + from_x) / 2; //where wire must turn and go vertically
+				
+				//background black line
+				glLineWidth(7);
+				glColor3ub(0, 0, 0);
+				glBegin(GL_LINES);
+				glVertex2f(to_x, to_y); glVertex2f(middle, to_y);
+				glVertex2f(middle, to_y); glVertex2f(middle, from_y);
+				glVertex2f(middle, from_y); glVertex2f(from_x, from_y);
+				glEnd();
+
+				//white line
+				glLineWidth(1);
+				glColor3ub(255, 255, 255);
+				glBegin(GL_LINES);
+				glVertex2f(to_x, to_y); glVertex2f(middle, to_y);
+				glVertex2f(middle, to_y); glVertex2f(middle, from_y);
+				glVertex2f(middle, from_y); glVertex2f(from_x, from_y);
+				glEnd();
+			}
+		}
+
 		void draw_caption()
 		{
 			glColor3ub(function->pack->contour_color.R, function->pack->contour_color.G, function->pack->contour_color.B);
@@ -185,13 +207,58 @@ class Scheme
 		bool captions_enabled;
 
 	public:
-		Scheme(): captions_enabled(true)
+		bool selecting,
+			 selecting_by_quad;
+
+		Scheme(): captions_enabled(true), selecting(false), selecting_by_quad(false)
 		{}
 
-		void unevaluate()
+		void unevaluate() { for (int i = 0; i < elements.size(); i++) elements[i]->unevaluate(); }
+
+		bool select_element(double mouse_x, double mouse_y)
 		{
-			for (int i = 0; i < elements.size(); i++) elements[i]->unevaluate();
+			for (int i = 0; i < elements.size(); i++)
+				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
+				{
+					elements[i]->select_unselect();
+					return true;
+				}
+			return false;
 		}
+
+		void select_elements(double mouse_x1, double mouse_y1, double mouse_x2, double mouse_y2)
+		{
+			if (mouse_x1 > mouse_x2) swap(mouse_x1, mouse_x2);
+			if (mouse_y1 < mouse_y2) swap(mouse_y1, mouse_y2);
+			for (int i = 0; i < elements.size(); i++)
+			{
+				if	(	mouse_x1 < (elements[i]->x + elements[i]->x_size) && mouse_x2 > elements[i]->x && 
+						mouse_y1 > elements[i]->y && mouse_y2 < (elements[i]->y + elements[i]->y_size))
+					elements[i]->select();
+				else elements[i]->unselect();
+			}
+		}
+
+		void draw_selection_quad()
+		{
+			select_elements(x_where_mouse_was_pressed, y_where_mouse_was_pressed, Mouse_x, Mouse_y);
+			glColor3ub(30, 200, 30);
+			glLineWidth(1);
+			glBegin(GL_LINE_STRIP);
+			glVertex2f(x_where_mouse_was_pressed, y_where_mouse_was_pressed); glVertex2f(x_where_mouse_was_pressed, Mouse_y);
+			glVertex2f(Mouse_x, Mouse_y); glVertex2f(Mouse_x, y_where_mouse_was_pressed);
+			glVertex2f(x_where_mouse_was_pressed, y_where_mouse_was_pressed);
+			glEnd();
+		}
+
+		bool selection_is_empty()
+		{
+			for (int i = 0; i < elements.size(); i++)
+				if (elements[i]->selected) return false;
+			return true;
+		}
+
+		void clear_selection() { for (int i = 0; i < elements.size(); i++) elements[i]->unselect(); }
 
 		void add_element(Function *function, double x, double y, double x_size, double y_size, int inputs_number, int outputs_number, bool dragging)
 		{
@@ -235,7 +302,8 @@ class Scheme
 			}
 
 			//elements
-			for (int i = 0; i < elements.size(); i++) elements[i]->draw();
+			for (int i = 0; i < elements.size(); i++) elements[i]->draw_wires();
+			for (int i = 0; i < elements.size(); i++) elements[i]->draw_self();
 	
 			//captions
 			if (captions_enabled)
@@ -249,7 +317,7 @@ class Scheme
 			else captions_enabled = true;
 		}
 
-		void try_to_drag(double mouse_x, double mouse_y)
+		bool try_to_drag_element(double mouse_x, double mouse_y)
 		{
 			x_where_mouse_was_pressed = double(mouse_x);
 			y_where_mouse_was_pressed = double(mouse_y);
@@ -259,8 +327,9 @@ class Scheme
 					dragged_elements.push_back(elements[i]);
 					elements[i]->x_from_where_dragging = elements[i]->x;
 					elements[i]->y_from_where_dragging = elements[i]->y;
-					break;
+					return true;
 				}
+			return false;
 		}
 
 		void release()
@@ -274,7 +343,7 @@ class Scheme
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
 					if (elements[i]->change_someput_value(mouse_x, mouse_y)) unevaluate();
-					break;
+					return;
 				}
 		}
 
@@ -285,6 +354,7 @@ class Scheme
 				{
 					if (mouse_x < elements[i]->middle) //connecting wire to input
 					{
+						if (from_element == elements[i]) return;
 						int input_number = int((mouse_y - elements[i]->y) / elements[i]->inputs_step);
 		
 						free(from_element->outputs[output_number]); from_element->outputs[output_number] = elements[i]->inputs[input_number]; //connecting values	
@@ -298,8 +368,12 @@ class Scheme
 				}
 		}
 
-		void try_to_add_wire(double mouse_x, double mouse_y)
+		bool try_to_add_wire(double mouse_x, double mouse_y)
 		{
+			x_where_mouse_was_pressed = mouse_x;
+			y_where_mouse_was_pressed = mouse_y;
+			Mouse_x = mouse_x;
+			Mouse_y = mouse_y;
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
@@ -314,8 +388,9 @@ class Scheme
 						from_element = elements[i];
 						adding_wire = true;
 					}
-					return;
+					return true;
 				}
+			return false;
 		}
 };
 

@@ -23,8 +23,16 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 	
 	if (!key) //left mouse key
 	{
-		if (!realised) active_tab->try_to_drag(mouse_x, mouse_y); //pressed
-		else active_tab->release(); //released
+		if (!realised) //pressed
+		{
+			if (active_tab->selecting)
+			{
+				active_tab->selecting = false; //then stop selecting
+				active_tab->clear_selection();
+			}
+			else active_tab->try_to_drag_element(mouse_x, mouse_y);
+		}
+		else active_tab->release(); //realised
 	}
 	else
 	if (key == 1) //middle mouse key
@@ -34,9 +42,36 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 	else
 	if (key == 2) //right mouse key
 	{
-		if (!realised) active_tab->try_to_add_wire(mouse_x, mouse_y);
+		if (!realised) //pressed
+		{
+			if (active_tab->selecting)
+			{
+				if (!active_tab->select_element(mouse_x, mouse_y))
+				{
+					x_where_mouse_was_pressed = mouse_x;
+					y_where_mouse_was_pressed = mouse_y;
+					Mouse_x = mouse_x;
+					Mouse_y = mouse_y;
+					active_tab->selecting_by_quad = true;
+				}
+				else
+				if (active_tab->selection_is_empty()) active_tab->selecting = false;
+			}
+			else
+			if (!active_tab->try_to_add_wire(mouse_x, mouse_y))
+			{
+				active_tab->selecting = true;
+				active_tab->selecting_by_quad = true;
+			}
+		}
 		else //realised
 		{
+			if (active_tab->selecting_by_quad)
+			{
+				active_tab->selecting_by_quad = false;
+				if (active_tab->selection_is_empty()) active_tab->selecting = false;
+			}
+			else
 			if (adding_wire)
 			{
 				active_tab->finish_adding_wire(mouse_x, mouse_y);
@@ -58,7 +93,7 @@ void dragging(int mouse_x, int mouse_y)
 		function_for_new_element = NULL;
 	}
 	
-	if (adding_wire)
+	if (adding_wire || active_tab->selecting_by_quad)
 	{
 		Mouse_x = mouse_x;
 		Mouse_y = mouse_y;
