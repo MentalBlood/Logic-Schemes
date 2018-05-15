@@ -260,20 +260,20 @@ class Scheme
 
 		void clear_selection() { for (int i = 0; i < elements.size(); i++) elements[i]->unselect(); }
 
-		void add_element(Function *function, double x, double y, double x_size, double y_size, int inputs_number, int outputs_number, bool dragging)
+		void add_element(Function *function, double x, double y, double x_size, double y_size, int inputs_number, int outputs_number, bool from_panel)
 		{
 			Element **element;
 			element = new Element*;
 			*element = new Element(function, x, y, x_size, y_size, inputs_number, outputs_number);
-			elements.push_back(*element);
-			(*element)->x_from_where_dragging = x;
-			(*element)->y_from_where_dragging = y;
-			if (dragging)
-			{
+			if (from_panel)
+			{	
 				x_where_mouse_was_pressed = x;
 				y_where_mouse_was_pressed = y;
+				(*element)->x_from_where_dragging = x;
+				(*element)->y_from_where_dragging = y;
 				dragged_elements.push_back(*element);
 			}
+			elements.push_back(*element);
 		}
 
 		void draw()
@@ -302,13 +302,11 @@ class Scheme
 			}
 
 			//elements
-			for (int i = 0; i < elements.size(); i++) elements[i]->draw_wires();
 			for (int i = 0; i < elements.size(); i++) elements[i]->draw_self();
-	
+			
 			//captions
 			if (captions_enabled)
-				for (int i = 0; i < elements.size(); i++)
-					elements[i]->draw_caption();
+				for (int i = 0; i < elements.size(); i++) elements[i]->draw_caption();
 		}
 
 		void show_hide_captions()
@@ -319,8 +317,8 @@ class Scheme
 
 		bool try_to_drag_element(double mouse_x, double mouse_y)
 		{
-			x_where_mouse_was_pressed = double(mouse_x);
-			y_where_mouse_was_pressed = double(mouse_y);
+			x_where_mouse_was_pressed = mouse_x;
+			y_where_mouse_was_pressed = mouse_y;
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
@@ -332,10 +330,7 @@ class Scheme
 			return false;
 		}
 
-		void release()
-		{
-			dragged_elements.clear();
-		}
+		void release() { dragged_elements.clear(); }
 
 		void try_to_change_someput_value(double mouse_x, double mouse_y)
 		{
@@ -391,6 +386,18 @@ class Scheme
 					return true;
 				}
 			return false;
+		}
+
+		void start_drag_field(double mouse_x, double mouse_y)
+		{
+			x_where_mouse_was_pressed = mouse_x;
+			y_where_mouse_was_pressed = mouse_y;
+			for (int i = 0; i < elements.size(); i++)
+			{
+				elements[i]->x_from_where_dragging = elements[i]->x;
+				elements[i]->y_from_where_dragging = elements[i]->y;
+				dragged_elements.push_back(elements[i]);
+			}
 		}
 };
 

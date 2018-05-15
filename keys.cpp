@@ -20,7 +20,7 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 	
 	if (!realised)
 		if (active_panel->press(mouse_x, mouse_y, key)) return; //check if press on panel
-	
+
 	if (!key) //left mouse key
 	{
 		if (!realised) //pressed
@@ -30,7 +30,7 @@ void mouse(int key, int realised, int mouse_x, int mouse_y)
 				active_tab->selecting = false; //then stop selecting
 				active_tab->clear_selection();
 			}
-			else active_tab->try_to_drag_element(mouse_x, mouse_y);
+			if (!active_tab->try_to_drag_element(mouse_x, mouse_y)) active_tab->start_drag_field(mouse_x, mouse_y);
 		}
 		else active_tab->release(); //realised
 	}

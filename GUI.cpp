@@ -326,8 +326,12 @@ class Elements_Panel
 						//elements list
 						if (key == 3) plus_page();
 						else if (key == 4) minus_page();
-						else function_for_new_element = functions[	first_element_index + 
-																	int((parameters_and_list_seperator_y - mouse_y)/page_graphical_length * elements_on_page)];
+						else
+						{
+							int function_for_new_element_index =	first_element_index + 
+																	int((parameters_and_list_seperator_y - mouse_y)/page_graphical_length * elements_on_page);
+							if (function_for_new_element_index < functions.size()) function_for_new_element = functions[function_for_new_element_index];
+						}
 					}
 					return true;
 				}
