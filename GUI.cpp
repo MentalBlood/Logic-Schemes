@@ -296,6 +296,7 @@ class Elements_Panel
 						//open/close button
 						if (opened) opened = false;
 						else opened = true;
+						render_needed = true;
 						return true;
 					}
 					else return false;
@@ -343,6 +344,7 @@ class Elements_Panel
 					//open/close button
 					if (opened) opened = false;
 					else opened = true;
+					render_needed = true;
 					return true;
 				}
 				else return false;
@@ -389,6 +391,10 @@ void ChangeSize(GLsizei w, GLsizei h)	//will be call every time window resizing
 
 void TimerFunction(int value)
 {
-	glutPostRedisplay();
+	if (render_needed)
+	{
+		render_needed = false;
+		glutPostRedisplay();
+	}
 	glutTimerFunc(dt, TimerFunction, 1);
 }

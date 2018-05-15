@@ -6,6 +6,8 @@
 
 using namespace std;
 
+bool render_needed = true;
+
 #include "logic_functions.hpp"
 #include "engine.cpp"
 #include "GUI.cpp"

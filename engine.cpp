@@ -187,6 +187,7 @@ class Element
 				if (*inputs[input_number]) *inputs[input_number] = false;
 				else *inputs[input_number] = true;
 				evaluate_chain();
+				render_needed = true;
 				return true;
 			}
 			return false;
@@ -221,6 +222,7 @@ class Scheme
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
 					elements[i]->select_unselect();
+					render_needed = true;
 					return true;
 				}
 			return false;
@@ -303,6 +305,7 @@ class Scheme
 
 			//elements
 			for (int i = 0; i < elements.size(); i++) elements[i]->draw_self();
+			for (int i = 0; i < elements.size(); i++) elements[i]->draw_wires();
 			
 			//captions
 			if (captions_enabled)
@@ -317,14 +320,43 @@ class Scheme
 
 		bool try_to_drag_element(double mouse_x, double mouse_y)
 		{
-			x_where_mouse_was_pressed = mouse_x;
-			y_where_mouse_was_pressed = mouse_y;
+			
 			for (int i = 0; i < elements.size(); i++)
+				//checking if cursor is on element
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
-					dragged_elements.push_back(elements[i]);
-					elements[i]->x_from_where_dragging = elements[i]->x;
-					elements[i]->y_from_where_dragging = elements[i]->y;
+					//remembering mouse coordinates for dragging
+					x_where_mouse_was_pressed = mouse_x;
+					y_where_mouse_was_pressed = mouse_y;
+					if (selecting)
+					{
+						if (elements[i]->selected)
+						{
+							//then start dragging selected elements
+							for (i = 0; i < elements.size(); i++)
+								if (elements[i]->selected)
+								{
+									elements[i]->x_from_where_dragging = elements[i]->x;
+									elements[i]->y_from_where_dragging = elements[i]->y;
+									dragged_elements.push_back(elements[i]);
+								}
+						}
+						else
+						{
+							//start dragging only pressed element
+							dragged_elements.clear();
+							elements[i]->x_from_where_dragging = elements[i]->x;
+							elements[i]->y_from_where_dragging = elements[i]->y;
+							dragged_elements.push_back(elements[i]);
+						}
+					}
+					else
+					{
+						//dragging only pressed element
+						elements[i]->x_from_where_dragging = elements[i]->x;
+						elements[i]->y_from_where_dragging = elements[i]->y;
+						dragged_elements.push_back(elements[i]);
+					}
 					return true;
 				}
 			return false;
