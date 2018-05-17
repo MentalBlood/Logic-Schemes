@@ -321,6 +321,7 @@ class Elements_Panel
 							if (key == 4) minus_input();
 							else plus_input();
 						}
+						render_needed = true;
 					}
 					else
 					{

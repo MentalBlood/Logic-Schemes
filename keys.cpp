@@ -24,7 +24,11 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 	double mouse_x, mouse_y;
 	translate_mouse_coordinates(base_mouse_x, base_mouse_y, &mouse_x, &mouse_y);
 	if (!realised)
+	{
+		if (!dragged_elements.empty()) return;
+		else
 		if (active_panel->press(mouse_x, mouse_y, key)) return; //check if press on panel
+	}
 
 	if (!key) //left mouse key
 	{
@@ -37,7 +41,7 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 	else
 	if (key == 1) //middle mouse key
 	{
-		if (!realised) active_tab->try_to_change_someput_value(mouse_x, mouse_y); //pressed
+		if (!realised) active_tab->try_to_change_input_value(mouse_x, mouse_y); //pressed
 	}
 	else
 	if (key == 2) //right mouse key
