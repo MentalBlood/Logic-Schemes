@@ -36,7 +36,9 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 	else
 	if (key == 1) //middle mouse key
 	{
-		if (!realised) active_tab->try_to_change_input_value(mouse_x, mouse_y); //pressed
+		if (!realised) //pressed
+			if (!active_tab->try_to_change_input_value(mouse_x, mouse_y))
+				active_panel->open_close();
 	}
 	else
 	if (key == 2) //right mouse key
@@ -52,13 +54,13 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 					Mouse_x = mouse_x;
 					Mouse_y = mouse_y;
 					active_tab->selecting_by_quad = true;
-					render_needed = true;
+					workspace_render_needed = true;
 				}
 				else
 				if (active_tab->selection_is_empty())
 				{
 					active_tab->selecting = false;
-					render_needed = true;
+					workspace_render_needed = true;
 				}
 			}
 			else
@@ -74,14 +76,14 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 			{
 				active_tab->selecting_by_quad = false;
 				if (active_tab->selection_is_empty()) active_tab->selecting = false;
-				render_needed = true;
+				workspace_render_needed = true;
 			}
 			else
 			if (adding_wire)
 			{
 				active_tab->finish_adding_wire(mouse_x, mouse_y);
 				adding_wire = false;
-				render_needed = true;
+				workspace_render_needed = true;
 			}
 		}
 	}
@@ -113,5 +115,5 @@ void dragging(int base_mouse_x, int base_mouse_y)
 		dragged_elements[i]->middle = dragged_elements[i]->x + dragged_elements[i]->x_size/2;
 	}
 
-	render_needed = true;
+	workspace_render_needed = true;
 }

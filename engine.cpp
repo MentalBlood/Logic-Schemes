@@ -311,7 +311,7 @@ class Scheme
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
 					elements[i]->select_unselect();
-					render_needed = true;
+					workspace_render_needed = true;
 					return true;
 				}
 			return false;
@@ -470,16 +470,17 @@ class Scheme
 
 		void release() { dragged_elements.clear(); }
 
-		void try_to_change_input_value(double mouse_x, double mouse_y)
+		bool try_to_change_input_value(double mouse_x, double mouse_y)
 		{
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
 					//if click is on inputs, then change input value, else remove element
 					if (!elements[i]->change_input_value(mouse_x, mouse_y)) delete_element(i);
-					render_needed = true;
-					return;
+					workspace_render_needed = true;
+					return true;
 				}
+			return false;
 		}
 
 		void finish_adding_wire(double mouse_x, double mouse_y)

@@ -33,11 +33,6 @@ class Elements_Panel
 		//graphical placement data
 		double border_x, 
 
-			   open_close_button_half_y_size, 
-			   open_close_button_right_x, 
-			   open_close_button_center, 
-			   open_close_button_sign_half_size, 
-			   
 			   parameters_and_list_seperator_y, parameters_horizontal_separator1_y, 
 			   parameters_vertical_separator_x, parameters_horizontal_separator2_y, 
 			   
@@ -52,6 +47,7 @@ class Elements_Panel
 
 	public:
 		vector<Function*> functions; //functions satisfying the parameters
+		bool panel_render_needed;
 
 		Elements_Panel(Functions_Base *functions_base): functions_base(functions_base), opened(true), current_page(1), current_inputs_number(0), current_outputs_number(0)
 		{
@@ -68,13 +64,7 @@ class Elements_Panel
 		{
 			x_size = windowWidth/3.25;
 			border_x = -windowWidth + x_size;
-			
-			double open_close_button_x_size = windowWidth/15;
-			open_close_button_right_x = border_x + open_close_button_x_size;
-			open_close_button_center = border_x + open_close_button_x_size/2;
-			open_close_button_half_y_size = windowHeight/5;
-			open_close_button_sign_half_size = open_close_button_x_size/3;
-			
+
 			double pixel_scale = glutGet(GLUT_WINDOW_HEIGHT)*windowHeight;
 			parameters_size = max(windowHeight*0.3, 120.0/pixel_scale);
 			parameters_and_list_seperator_y = windowHeight - parameters_size;
@@ -82,7 +72,7 @@ class Elements_Panel
 			double parameters_step = parameters_size/3;
 			parameters_horizontal_separator1_y = parameters_and_list_seperator_y + parameters_step;
 			parameters_horizontal_separator2_y = parameters_horizontal_separator1_y + parameters_step;
-			
+
 			text_pos_x = -windowWidth + 0.5;
 			values_pos_x = parameters_vertical_separator_x + 1.5;
 			double text_margin_y = (parameters_step - 13.0/pixel_scale)/2;
@@ -164,32 +154,12 @@ class Elements_Panel
 
 		void draw()
 		{
+			panel_render_needed = false;
+			if (!opened) return;
+
+			glDisable(GL_SCISSOR_TEST);
 			glColor3ub(0, 0, 0);
 			glLineWidth(1);
-
-			if (!opened) //closed => only open button
-			{
-				//background
-				glBegin(GL_QUADS);
-				glVertex2f(-windowWidth, open_close_button_half_y_size); glVertex2f(open_close_button_right_x - x_size, open_close_button_half_y_size);
-				glVertex2f(open_close_button_right_x - x_size, -open_close_button_half_y_size); glVertex2f(-windowWidth, -open_close_button_half_y_size);
-				glEnd();
-
-				//contour
-				glColor3ub(255, 255, 255);
-				glBegin(GL_LINE_STRIP);
-				glVertex2f(-windowWidth, open_close_button_half_y_size); glVertex2f(open_close_button_right_x - x_size, open_close_button_half_y_size);
-				glVertex2f(open_close_button_right_x - x_size, -open_close_button_half_y_size); glVertex2f(-windowWidth, -open_close_button_half_y_size);
-				glEnd();
-				
-				//sign
-				glColor3ub(255, 255, 70);
-				glBegin(GL_LINES);
-				glVertex2f(open_close_button_center - open_close_button_sign_half_size - x_size, 0); glVertex2f(open_close_button_center + open_close_button_sign_half_size - x_size, 0);
-				glVertex2f(open_close_button_center - x_size, open_close_button_sign_half_size); glVertex2f(open_close_button_center - x_size, -open_close_button_sign_half_size);
-				glEnd();
-				return;
-			}
 
 			//background
 			glBegin(GL_QUADS);
@@ -197,27 +167,6 @@ class Elements_Panel
 			glVertex2f(border_x, -windowHeight); glVertex2f(-windowWidth, -windowHeight);
 			glEnd();
 
-			//close button
-				//background
-				glColor3ub(0, 0, 0);
-				glBegin(GL_QUADS);
-				glVertex2f(border_x, open_close_button_half_y_size); glVertex2f(open_close_button_right_x, open_close_button_half_y_size);
-				glVertex2f(open_close_button_right_x, -open_close_button_half_y_size); glVertex2f(border_x, -open_close_button_half_y_size);
-				glEnd();
-				
-				//contour
-				glColor3ub(255, 255, 255);
-				glBegin(GL_LINE_STRIP);
-				glVertex2f(border_x, open_close_button_half_y_size); glVertex2f(open_close_button_right_x, open_close_button_half_y_size);
-				glVertex2f(open_close_button_right_x, -open_close_button_half_y_size); glVertex2f(border_x, -open_close_button_half_y_size);
-				glEnd();
-
-				//sign
-				glColor3ub(255, 255, 70);
-				glBegin(GL_LINES);
-				glVertex2f(open_close_button_center - open_close_button_sign_half_size, 0); glVertex2f(open_close_button_center + open_close_button_sign_half_size, 0);
-				glEnd();
-			
 			//border
 			glColor3ub(255, 255, 255);
 			glBegin(GL_LINES);
@@ -288,20 +237,7 @@ class Elements_Panel
 		{
 			if (opened)
 			{
-				if (mouse_x > border_x)
-				{
-					//open/close button (maybe)
-					if (mouse_x < open_close_button_right_x && mouse_y < open_close_button_half_y_size && mouse_y > -open_close_button_half_y_size)
-					{
-						//open/close button
-						if (opened) opened = false;
-						else opened = true;
-						render_needed = true;
-						return true;
-					}
-					else return false;
-				}
-				else
+				if (mouse_x < border_x)
 				{
 					//panel
 					if (mouse_y > parameters_horizontal_separator1_y)
@@ -321,7 +257,9 @@ class Elements_Panel
 							if (key == 4) minus_input();
 							else plus_input();
 						}
-						render_needed = true;
+						glScissor(0, 0, x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, glutGet(GLUT_WINDOW_HEIGHT));
+						glEnable(GL_SCISSOR_TEST);
+						panel_render_needed = true;
 					}
 					else
 					{
@@ -338,31 +276,45 @@ class Elements_Panel
 					return true;
 				}
 			}
+		}
+
+		void open_close()
+		{
+			if (opened)
+			{
+				opened = false;
+				glDisable(GL_SCISSOR_TEST);
+				workspace_render_needed = true;
+			}
 			else
 			{
-				if (mouse_x < open_close_button_right_x - x_size && mouse_y < open_close_button_half_y_size && mouse_y > -open_close_button_half_y_size)
-				{
-					//open/close button
-					if (opened) opened = false;
-					else opened = true;
-					render_needed = true;
-					return true;
-				}
-				else return false;
+				opened = true;
+				glScissor(0, 0, x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, glutGet(GLUT_WINDOW_HEIGHT));
+				glEnable(GL_SCISSOR_TEST);
+				panel_render_needed = true;
+			}
+		}
+		
+		void freeze_self()
+		{
+			if (opened)
+			{
+				glScissor(x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, 0, (2*windowWidth - x_size)/2/scale*glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
+				glEnable(GL_SCISSOR_TEST);
+			}
+		}
+
+		void freeze_workspace()
+		{
+			if (opened)
+			{
+				glScissor(0, 0, x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, glutGet(GLUT_WINDOW_HEIGHT));
+				glEnable(GL_SCISSOR_TEST);			
 			}
 		}
 };
 
 Elements_Panel *active_panel = NULL;
-
-void RenderScene(void)
-{
-	glClear(GL_COLOR_BUFFER_BIT);
-	active_tab->draw();
-	if (active_tab->selecting_by_quad) active_tab->draw_selection_quad();
-	active_panel->draw();
-	glutSwapBuffers();
-}
 
 void SetupRC(void) { glClearColor(0.0f,0.0f,0.0f,1.0f); }
  
@@ -390,12 +342,30 @@ void ChangeSize(GLsizei w, GLsizei h)	//will be call every time window resizing
 	if (active_panel) active_panel->recalculate_graphical_placement_data();
 }
 
+void RenderScene(void)
+{
+	if (workspace_render_needed)
+	{
+		active_panel->freeze_self();
+		workspace_render_needed = false;
+		glClear(GL_COLOR_BUFFER_BIT);
+		active_tab->draw();
+		if (active_tab->selecting_by_quad) active_tab->draw_selection_quad();
+		glutSwapBuffers();
+		active_panel->freeze_workspace();
+		return;
+	}
+	if (active_panel->panel_render_needed)
+	{
+		glClear(GL_COLOR_BUFFER_BIT);
+		active_panel->draw();
+		glutSwapBuffers();
+		active_panel->freeze_self();
+	}
+}
+
 void TimerFunction(int value)
 {
-	if (render_needed)
-	{
-		render_needed = false;
-		glutPostRedisplay();
-	}
+	if (workspace_render_needed || active_panel->panel_render_needed) glutPostRedisplay();
 	glutTimerFunc(dt, TimerFunction, 1);
 }
