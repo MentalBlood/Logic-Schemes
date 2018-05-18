@@ -1,5 +1,4 @@
-double windowWidth, windowHeight, scale = 100, dt = 5;
-double aspectRatio;
+double windowWidth, windowHeight, scale = 100, dt = 5, aspectRatio;
 
 bool* boolinter(bool value) //makes boolean with given value and retuns pointer to it
 {

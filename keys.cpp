@@ -12,20 +12,15 @@ void setup_keys()
 	keys[99] = show_hide_captions;
 }
 
-void translate_mouse_coordinates(int base_mouse_x, int base_mouse_y, double *mouse_x, double *mouse_y)
-{
-	*mouse_x = base_mouse_x - glutGet(GLUT_WINDOW_WIDTH)/2;
-	*mouse_y = glutGet(GLUT_WINDOW_HEIGHT)/2 - base_mouse_y;
-	*mouse_x = int(*mouse_x/4); *mouse_y = int(*mouse_y/4);
-}
-
 void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 {
-	double mouse_x, mouse_y;
-	translate_mouse_coordinates(base_mouse_x, base_mouse_y, &mouse_x, &mouse_y);
+	double mouse_x = (2*double(base_mouse_x)/glutGet(GLUT_WINDOW_WIDTH) - 1)*scale;
+	double mouse_y = (1 - 2*double(base_mouse_y)/glutGet(GLUT_WINDOW_HEIGHT))*scale;
+	if (aspectRatio < 1.0) mouse_y /= aspectRatio;
+	else mouse_x *= aspectRatio;
 	if (!realised)
 	{
-		if (!dragged_elements.empty()) return;
+		if (!dragged_elements.empty() || active_tab->selecting_by_quad) return;
 		else
 		if (active_panel->press(mouse_x, mouse_y, key)) return; //check if press on panel
 	}
@@ -94,8 +89,10 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 
 void dragging(int base_mouse_x, int base_mouse_y)
 {
-	double mouse_x, mouse_y;
-	translate_mouse_coordinates(base_mouse_x, base_mouse_y, &mouse_x, &mouse_y);
+	double mouse_x = (2*double(base_mouse_x)/glutGet(GLUT_WINDOW_WIDTH) - 1)*scale;
+	double mouse_y = (1 - 2*double(base_mouse_y)/glutGet(GLUT_WINDOW_HEIGHT))*scale;
+	if (aspectRatio < 1.0) mouse_y /= aspectRatio;
+	else mouse_x *= aspectRatio;
 
 	if (function_for_new_element) 
 	{

@@ -328,7 +328,7 @@ class Elements_Panel
 						//elements list
 						if (key == 3) plus_page();
 						else if (key == 4) minus_page();
-						else
+						else if (!key)
 						{
 							int function_for_new_element_index =	first_element_index + 
 																	int((parameters_and_list_seperator_y - mouse_y)/page_graphical_length * elements_on_page);
@@ -359,8 +359,8 @@ void RenderScene(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 	active_tab->draw();
-	active_panel->draw();
 	if (active_tab->selecting_by_quad) active_tab->draw_selection_quad();
+	active_panel->draw();
 	glutSwapBuffers();
 }
 
