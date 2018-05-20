@@ -26,12 +26,12 @@ class Elements_Panel
 		int current_page, current_inputs_number, current_outputs_number,
 			last_element_index, first_element_index;
 		unsigned char current_page_string[5], current_inputs_number_string[5], current_outputs_number_string[5];
-		double x_size, parameters_size, element_button_size;
+		float x_size, parameters_size, element_button_size;
 		bool opened;
 		Functions_Base *functions_base; //base with wich this panel operate
 
 		//graphical placement data
-		double border_x, 
+		float border_x, x_size_in_pixels, 
 
 			   parameters_and_list_seperator_y, parameters_horizontal_separator1_y, 
 			   parameters_vertical_separator_x, parameters_horizontal_separator2_y, 
@@ -47,7 +47,6 @@ class Elements_Panel
 
 	public:
 		vector<Function*> functions; //functions satisfying the parameters
-		bool panel_render_needed;
 
 		Elements_Panel(Functions_Base *functions_base): functions_base(functions_base), opened(true), current_page(1), current_inputs_number(0), current_outputs_number(0)
 		{
@@ -58,24 +57,27 @@ class Elements_Panel
 			functions_base->write_functions_by_parameters_to_vector(current_inputs_number, current_outputs_number, functions);
 			first_element_index = (current_page - 1)*elements_on_page;
 			last_element_index = min(int(functions.size()), first_element_index + elements_on_page);
+			active_tab->set_workspace_area(x_size_in_pixels + 1, 0, glutGet(GLUT_WINDOW_WIDTH) - x_size_in_pixels, glutGet(GLUT_WINDOW_HEIGHT));
 		}
 		
 		void recalculate_graphical_placement_data()
 		{
 			x_size = windowWidth/3.25;
+			x_size_in_pixels = float(glutGet(GLUT_WINDOW_WIDTH))/6.5;
+			//if (aspectRatio < 1.0) x_size_in_pixels /= aspectRatio;
 			border_x = -windowWidth + x_size;
 
-			double pixel_scale = glutGet(GLUT_WINDOW_HEIGHT)*windowHeight;
+			float pixel_scale = glutGet(GLUT_WINDOW_HEIGHT)*windowHeight;
 			parameters_size = max(windowHeight*0.3, 120.0/pixel_scale);
 			parameters_and_list_seperator_y = windowHeight - parameters_size;
 			parameters_vertical_separator_x = border_x - x_size/2;
-			double parameters_step = parameters_size/3;
+			float parameters_step = parameters_size/3;
 			parameters_horizontal_separator1_y = parameters_and_list_seperator_y + parameters_step;
 			parameters_horizontal_separator2_y = parameters_horizontal_separator1_y + parameters_step;
 
 			text_pos_x = -windowWidth + 0.5;
 			values_pos_x = parameters_vertical_separator_x + 1.5;
-			double text_margin_y = (parameters_step - 13.0/pixel_scale)/2;
+			float text_margin_y = (parameters_step - 13.0/pixel_scale)/2;
 			text_pos_1_y = parameters_and_list_seperator_y + text_margin_y;
 			text_pos_2_y = parameters_horizontal_separator1_y + text_margin_y;
 			text_pos_3_y = parameters_horizontal_separator2_y + text_margin_y;
@@ -83,7 +85,7 @@ class Elements_Panel
 			elements_step = max(10.0, 40.0/pixel_scale);
 			page_graphical_length = windowHeight + parameters_and_list_seperator_y;
 			elements_on_page = int(page_graphical_length / elements_step);
-			elements_step = page_graphical_length / double(elements_on_page);
+			elements_step = page_graphical_length / float(elements_on_page);
 		}
 
 		void refresh_functions_list() { functions_base->write_functions_by_parameters_to_vector(current_inputs_number, current_outputs_number, functions); }
@@ -146,18 +148,23 @@ class Elements_Panel
 			refresh_page_data();
 		}
 
-		void give_birth_to_new_element(double x, double y)
+		void give_birth_to_new_element(float x, float y)
 		{
 			active_tab->add_element(function_for_new_element, x, y, 10, 20, 
 					max(max(current_inputs_number, 1), function_for_new_element->min_inputs_number), max(max(current_outputs_number, 1), function_for_new_element->min_outputs_number), true);
 		}
 
+		void freeze_other_area()
+		{
+//			printf("panel scissor %d %d %d %d\n", 0, 0, int(x_size_in_pixels) + 1, int(glutGet(GLUT_WINDOW_HEIGHT)));
+			glScissor(0, 0, int(x_size_in_pixels) + 1, int(glutGet(GLUT_WINDOW_HEIGHT)));
+			glEnable(GL_SCISSOR_TEST);
+		}
+
 		void draw()
 		{
-			panel_render_needed = false;
 			if (!opened) return;
 
-			glDisable(GL_SCISSOR_TEST);
 			glColor3ub(0, 0, 0);
 			glLineWidth(1);
 
@@ -195,7 +202,7 @@ class Elements_Panel
 
 			//elements list
 			if (functions.empty()) return;
-			double up_side_y = parameters_and_list_seperator_y, 
+			float up_side_y = parameters_and_list_seperator_y, 
 				   down_side_y = parameters_and_list_seperator_y - elements_step,
 				   name_y_margin = (elements_step - 15.0/glutGet(GLUT_WINDOW_HEIGHT)*windowHeight)/2,
 				   name_x;
@@ -233,7 +240,7 @@ class Elements_Panel
 			}
 		}
 
-		bool press(double mouse_x, double mouse_y, int key)
+		bool press(float mouse_x, float mouse_y, int key)
 		{
 			if (opened)
 			{
@@ -257,8 +264,6 @@ class Elements_Panel
 							if (key == 4) minus_input();
 							else plus_input();
 						}
-						glScissor(0, 0, x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, glutGet(GLUT_WINDOW_HEIGHT));
-						glEnable(GL_SCISSOR_TEST);
 						panel_render_needed = true;
 					}
 					else
@@ -283,34 +288,22 @@ class Elements_Panel
 			if (opened)
 			{
 				opened = false;
-				glDisable(GL_SCISSOR_TEST);
+				active_tab->set_workspace_area(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
 				workspace_render_needed = true;
 			}
 			else
 			{
 				opened = true;
-				glScissor(0, 0, x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, glutGet(GLUT_WINDOW_HEIGHT));
-				glEnable(GL_SCISSOR_TEST);
+				active_tab->set_workspace_area(x_size_in_pixels + 1, 0, glutGet(GLUT_WINDOW_WIDTH) - x_size_in_pixels, glutGet(GLUT_WINDOW_HEIGHT));
 				panel_render_needed = true;
 			}
 		}
-		
-		void freeze_self()
-		{
-			if (opened)
-			{
-				glScissor(x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, 0, (2*windowWidth - x_size)/2/scale*glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
-				glEnable(GL_SCISSOR_TEST);
-			}
-		}
 
-		void freeze_workspace()
+		void refresh_wokspace_area()
 		{
-			if (opened)
-			{
-				glScissor(0, 0, x_size/2/scale*glutGet(GLUT_WINDOW_WIDTH) + 1, glutGet(GLUT_WINDOW_HEIGHT));
-				glEnable(GL_SCISSOR_TEST);			
-			}
+			printf("%d : %d, %d\n", glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), int(x_size_in_pixels));
+			if (opened) active_tab->set_workspace_area(int(x_size_in_pixels) + 1, 0, glutGet(GLUT_WINDOW_WIDTH) - int(x_size_in_pixels), glutGet(GLUT_WINDOW_HEIGHT));
+			else active_tab->set_workspace_area(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
 		}
 };
 
@@ -324,7 +317,7 @@ void ChangeSize(GLsizei w, GLsizei h)	//will be call every time window resizing
 	glViewport(0, 0, w, h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	aspectRatio = (GLdouble)w / (GLdouble)h;
+	aspectRatio = (float)w / (float)h;
 	if (w <= h)
 	{
 		windowWidth = scale;
@@ -339,33 +332,63 @@ void ChangeSize(GLsizei w, GLsizei h)	//will be call every time window resizing
 	}
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	if (active_panel) active_panel->recalculate_graphical_placement_data();
+	if (active_panel)
+	{
+		active_panel->recalculate_graphical_placement_data();
+		active_panel->refresh_wokspace_area();
+		panel_render_needed = true;
+		workspace_render_needed = true;
+	}
 }
 
-void RenderScene(void)
+void render_workspace()
 {
-	if (workspace_render_needed)
-	{
-		active_panel->freeze_self();
-		workspace_render_needed = false;
-		glClear(GL_COLOR_BUFFER_BIT);
-		active_tab->draw();
-		if (active_tab->selecting_by_quad) active_tab->draw_selection_quad();
-		glutSwapBuffers();
-		active_panel->freeze_workspace();
-		return;
-	}
-	if (active_panel->panel_render_needed)
-	{
-		glClear(GL_COLOR_BUFFER_BIT);
-		active_panel->draw();
-		glutSwapBuffers();
-		active_panel->freeze_self();
-	}
+	workspace_render_needed = false;
+	active_tab->freeze_other_area();
+	glClear(GL_COLOR_BUFFER_BIT);
+	active_tab->draw();
+	if (active_tab->selecting_by_quad) active_tab->draw_selection_quad();
+	glutSwapBuffers();
+	glDisable(GL_SCISSOR_TEST);
 }
 
+void render_panel()
+{
+	panel_render_needed = false;
+	active_panel->freeze_other_area();
+	glClear(GL_COLOR_BUFFER_BIT);
+	active_panel->draw();
+	glutSwapBuffers();
+	glDisable(GL_SCISSOR_TEST);
+}
+
+void render_editor(void)
+{
+	if (workspace_render_needed) render_workspace();
+	if (panel_render_needed) render_panel();
+	/*glScissor(0, 0, 300, 300);
+	glEnable(GL_SCISSOR_TEST);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBegin(GL_QUADS);
+	glVertex2f(-scale, -scale); glVertex2f(scale, -scale);
+	glVertex2f(scale, scale); glVertex2f(-scale, scale);
+	glEnd();
+	glutSwapBuffers();
+	glDisable(GL_SCISSOR_TEST);*/
+}
+/*
+void render_add_element_window()
+{
+	
+}
+
+void render_add_element_window()
+{
+	//if (add_element_window_render_needed) render_add_element_window();
+}
+*/
 void TimerFunction(int value)
 {
-	if (workspace_render_needed || active_panel->panel_render_needed) glutPostRedisplay();
+	glutPostRedisplay();
 	glutTimerFunc(dt, TimerFunction, 1);
 }

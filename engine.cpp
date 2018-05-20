@@ -83,34 +83,52 @@ class Element
 
 		bool connect_input_to(int input_number, Element *to_element, int output_number)
 		{
+			printf("connect_input_to\n");
 			//if input already connected to this element
 			if ((input_wires[input_number] != NULL) && (input_wires[input_number] == to_element->output_wires[output_number])) return false;
+			printf("not connected yet\n");
 
 			//if there is no wire in needed output, then creating it
 			if (to_element->output_wires[output_number] == NULL)
+			{
+				printf("there is no wire in output => creating it\n");
 				to_element->output_wires[output_number] = new Wire(to_element, this, output_number, input_number);
+				printf("created\n");
+			}
 			else
 			{
+				printf("needed output wire already existing, connecting from it\n");
 				to_element->output_wires[output_number]->to.push_back(this);
 				to_element->output_wires[output_number]->input_numbers.push_back(input_number);
 			}
 
 			//clearing and connecting
+			printf("clearing\n");
 			delete input_wires[input_number];
+			printf("connecting\n");
 			input_wires[input_number] = to_element->output_wires[output_number];
+			printf("connected\n");
 			return true;
 		}
 
 		void delete_input_wire(int input_number)
 		{
+			printf("delete_input_wire\n");
+
 			//disconnecting values
 			inputs[input_number] = boolinter(*inputs[input_number]);
+			printf("OK\n");
 
 			//deleting it from output
 			int i = 0;
 			Wire *output_wire = input_wires[input_number]->from->output_wires[input_wires[input_number]->output_number];
 			//if it is the last output wire, then deleting it totally, else deleting only it's part
-			if (output_wire->to.empty()) delete input_wires[input_number]->from;
+			if (output_wire->to.empty())
+			{
+				printf("output_wires->to.empty()\n");
+				input_wires[input_number]->from->output_wires[input_wires[input_number]->output_number] = NULL;
+				delete output_wire;
+			}
 			else
 			{
 				for (; i < output_wire->to.size(); i++)
@@ -124,6 +142,7 @@ class Element
 
 		void delete_output_wire(int output_number)
 		{
+			printf("delete_output_wire\n");
 			for (int i = 0; i < output_wires[output_number]->to.size(); i++)
 			{
 				//disconnecting values
@@ -291,6 +310,7 @@ class Scheme
 		vector<Element*> elements;
 		vector<bool*> inputs, outputs;
 		bool captions_enabled;
+		int workspace_x, workspace_y, workspace_x_size, workspace_y_size;
 
 	public:
 		bool selecting,
@@ -303,6 +323,12 @@ class Scheme
 		{
 			for (int i = 0; i < elements.size(); i++) delete elements[i];
 			elements.clear();
+		}
+
+		void set_workspace_area(int x, int y, int x_size, int y_size)
+		{
+			workspace_x = x; workspace_x_size = x_size;
+			workspace_y = y; workspace_y_size = y_size;
 		}
 
 		bool select_element(double mouse_x, double mouse_y)
@@ -372,6 +398,13 @@ class Scheme
 			Element *temp = elements[element_number];
 			elements.erase(elements.begin() + element_number);
 			delete temp;
+		}
+
+		void freeze_other_area()
+		{
+//			printf("workspace scissor %d %d %d %d\n", workspace_x, workspace_y, workspace_x_size, workspace_y_size);
+			glScissor(workspace_x, workspace_y, workspace_x_size, workspace_y_size);
+			glEnable(GL_SCISSOR_TEST);
 		}
 
 		void draw()
@@ -485,6 +518,7 @@ class Scheme
 
 		void finish_adding_wire(double mouse_x, double mouse_y)
 		{
+			printf("finish adding wire\n");
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
 				{
@@ -494,25 +528,33 @@ class Scheme
 					{
 						if (mouse_x < elements[i]->middle) //connecting wire to input
 						{
+							printf("connecting wire to input\n");
 							int input_number = int((mouse_y - elements[i]->y) / elements[i]->inputs_step);
 
+							//checking if the input is empty and if it is not, then removing wire
+							if (elements[i]->input_wires[input_number] != NULL) elements[i]->delete_input_wire(input_number);
+
 							//try to connect wire (false if it is already connected here)
+							printf("try to connect wire\n");
 							if (!elements[i]->connect_input_to(input_number, first_element, firstput_number)) return;
 							//connecting values
+							printf("ok, connecting values\n");
 							elements[i]->inputs[input_number] = first_element->outputs[firstput_number];	
 							//reevaluating
+							printf("reevaluating\n");
 							first_element->evaluate_chain();
 						}
 					}
 					else
 						if (mouse_x > elements[i]->middle) //connecting wire to output
 						{
+							printf("connecting wire to output\n");
 							int output_number = int((mouse_y - elements[i]->y) / elements[i]->outputs_step);
-		
-							//connecting values
-							first_element->inputs[firstput_number] = elements[i]->outputs[output_number];	
+
 							//connecting wire
 							first_element->connect_input_to(firstput_number, elements[i], output_number);
+							//connecting values
+							first_element->inputs[firstput_number] = elements[i]->outputs[output_number];
 							//reevaluating
 							first_element->evaluate_chain();
 						}
@@ -522,6 +564,7 @@ class Scheme
 
 		bool try_to_add_wire(double mouse_x, double mouse_y)
 		{
+			printf("try_to_add_wire\n");
 			x_where_mouse_was_pressed = mouse_x;
 			y_where_mouse_was_pressed = mouse_y;
 			Mouse_x = mouse_x;
@@ -531,11 +574,13 @@ class Scheme
 				{
 					if (mouse_x > elements[i]->middle) //adding wire from output
 					{
+						printf("adding wire from output\n");
 						from_output = true;
 						firstput_number = int((mouse_y - elements[i]->y) / elements[i]->outputs_step); //a bit of magic
 					}
 					else //adding wire from input
 					{
+						printf("adding wire from input\n");
 						from_output = false;
 						firstput_number = int((mouse_y - elements[i]->y) / elements[i]->inputs_step); //a bit of magic
 						//if there is already a wire in input, then deleting it

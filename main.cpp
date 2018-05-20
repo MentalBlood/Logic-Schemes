@@ -6,7 +6,7 @@
 
 using namespace std;
 
-bool workspace_render_needed = true;
+bool workspace_render_needed = true, panel_render_needed = true;
 
 #include "logic_functions.hpp"
 #include "engine.cpp"
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE);
 	glutCreateWindow("Logic schemes interpreter");
-	glutDisplayFunc(RenderScene);
+	glutDisplayFunc(render_editor);
 	glutReshapeFunc(ChangeSize);
 	glutTimerFunc(dt, TimerFunction, 1);
 	SetupRC();
