@@ -14,8 +14,8 @@ void setup_keys()
 
 void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 {
-	double mouse_x = (2*double(base_mouse_x)/glutGet(GLUT_WINDOW_WIDTH) - 1)*scale;
-	double mouse_y = (1 - 2*double(base_mouse_y)/glutGet(GLUT_WINDOW_HEIGHT))*scale;
+	float mouse_x = (2*float(base_mouse_x)/glutGet(GLUT_WINDOW_WIDTH) - 1)*scale;
+	float mouse_y = (1 - 2*float(base_mouse_y)/glutGet(GLUT_WINDOW_HEIGHT))*scale;
 	if (aspectRatio < 1.0) mouse_y /= aspectRatio;
 	else mouse_x *= aspectRatio;
 	if (!realised)
@@ -23,6 +23,7 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 		if (!dragged_elements.empty() || active_tab->selecting_by_quad) return;
 		else
 		if (active_panel->press(mouse_x, mouse_y, key)) return; //check if press on panel
+		if (press_on_tabs_panel(mouse_x, mouse_y, key)) return; //check if press on tabs
 	}
 
 	if (!key) //left mouse key
@@ -91,8 +92,8 @@ void mouse(int key, int realised, int base_mouse_x, int base_mouse_y)
 
 void dragging(int base_mouse_x, int base_mouse_y)
 {
-	double mouse_x = (2*double(base_mouse_x)/glutGet(GLUT_WINDOW_WIDTH) - 1)*scale;
-	double mouse_y = (1 - 2*double(base_mouse_y)/glutGet(GLUT_WINDOW_HEIGHT))*scale;
+	float mouse_x = (2*float(base_mouse_x)/glutGet(GLUT_WINDOW_WIDTH) - 1)*scale;
+	float mouse_y = (1 - 2*float(base_mouse_y)/glutGet(GLUT_WINDOW_HEIGHT))*scale;
 	if (aspectRatio < 1.0) mouse_y /= aspectRatio;
 	else mouse_x *= aspectRatio;
 

@@ -1,4 +1,24 @@
-double windowWidth, windowHeight, scale = 100, dt = 5, aspectRatio;
+float windowWidth, windowHeight, scale = 100, dt = 5, aspectRatio;
+
+void int_to_string(int x, unsigned char *string)
+{
+	for (unsigned char *c = string; ; c++)
+	{
+		*c = '0' + x%10;
+		x /= 10;
+		if (!x)
+		{
+			*(c+1) = 0;
+			for (unsigned char *c1 = string; c1 <= c; c--, c1++) //inverting string
+			{
+				unsigned char temp = *c1;
+				*c1 = *c;
+				*c = temp;
+			}
+			return;
+		}
+	}
+}
 
 bool* boolinter(bool value) //makes boolean with given value and retuns pointer to it
 {
@@ -39,15 +59,15 @@ class Element
 				bool new_value;
 		};
 
-		double x, y, x_size, y_size, middle;
-		double inputs_step, outputs_step; //(graphics)
-		double x_from_where_dragging, y_from_where_dragging;
+		float x, y, x_size, y_size, middle;
+		float inputs_step, outputs_step; //(graphics)
+		float x_from_where_dragging, y_from_where_dragging;
 		vector<bool*> inputs, outputs; //values
 		vector<bool> new_outputs;
 		vector<Wire*> input_wires, output_wires;
 
-		Element(Function *function, double x, double y, double x_size, double y_size, int inputs_number, int outputs_number):
-			x(x), y(y), x_size(x_size), y_size(y_size), function(function)
+		Element(Function *function, float x, float y, float x_size, float y_size, int inputs_number, int outputs_number):
+			x(x), y(y), x_size(x_size), y_size(y_size), middle(x + x_size/2), function(function), selected(false)
 		{	
 			//filling inputs and outputs by zeros
 			for (int i = 0; i < outputs_number; i++)
@@ -62,11 +82,8 @@ class Element
 				input_wires.push_back(NULL);
 			}
 
-			selected = false;
-
 			//calculating inputs and outputs steps and middle
 			inputs_step = y_size / inputs.size(); outputs_step = y_size / outputs.size();
-			middle = x + x_size/2;
 
 			evaluate_chain();
 		}
@@ -161,9 +178,15 @@ class Element
 		void unselect() { selected = false; }
 		void select_unselect() { if (selected) selected = false; else selected = true; }
 
+		void evaluate_elements_from_output(int output_number)
+		{
+			for (int i = 0; i < output_wires[output_number]->to.size(); i++)
+				output_wires[output_number]->to[i]->evaluate_chain();
+		}
+
 		void evaluate_chain() //evaluate self and next elemenets which must be reevaluated
 		{
-			function->evaluate(inputs, new_outputs); //evaluate self
+			if (function) function->evaluate(inputs, new_outputs); //evaluate self
 			vector<Element*> next_elements_wich_must_be_evaluated;
 			for (int i = 0; i < new_outputs.size(); i++)
 			{
@@ -182,7 +205,7 @@ class Element
 			glLineWidth(1);
 			if (selected)
 			{
-				double margin = max(x_size/8, 2 + 15.0/glutGet(GLUT_WINDOW_HEIGHT)*windowHeight);
+				float margin = max(x_size/8, float(2.0 + 15.0/glutGet(GLUT_WINDOW_HEIGHT)*windowHeight));
 				glColor3ub(30, 200, 30);
 				glBegin(GL_LINE_STRIP);
 				glVertex2f(x-margin, y-margin); glVertex2f(x+margin + x_size, y-margin);
@@ -212,7 +235,7 @@ class Element
 			glVertex2f(middle, y); glVertex2f(middle, y + y_size);
 
 			//inputs
-			double border_y = y+inputs_step;
+			float border_y = y+inputs_step;
 			for (int i = 0; i < inputs.size(); i++)
 			{
 				glVertex2f(x, border_y); glVertex2f(middle, border_y);
@@ -240,7 +263,7 @@ class Element
 		void draw_wires()
 		{
 			//output wires
-			double from_x = x + x_size,
+			float from_x = x + x_size,
 				   from_y = y+outputs_step/2;
 			for (int i = 0; i < output_wires.size(); i++, from_y += outputs_step)
 			{
@@ -249,10 +272,10 @@ class Element
 				for (int j = 0; j < output_wires[i]->to.size(); j++)
 				{
 					//calculating from wich point we must draw the wire
-					double	to_x = output_wires[i]->to[j]->x,
-							to_y = output_wires[i]->to[j]->y + output_wires[i]->to[j]->inputs_step*(double(output_wires[i]->input_numbers[j])+0.5);
+					float	to_x = output_wires[i]->to[j]->x,
+							to_y = output_wires[i]->to[j]->y + output_wires[i]->to[j]->inputs_step*(float(output_wires[i]->input_numbers[j])+0.5);
 				
-					double	middle = (to_x + from_x) / 2; //where wire must turn and go vertically
+					float	middle = (to_x + from_x) / 2; //where wire must turn and go vertically
 				
 					//background black line
 					glLineWidth(7);
@@ -282,7 +305,7 @@ class Element
 			glutBitmapString(GLUT_BITMAP_8_BY_13, function->name);
 		}
 
-		bool change_input_value(double mouse_x, double mouse_y)
+		bool change_input_value(float mouse_x, float mouse_y)
 		{
 			if (mouse_x < middle) //input
 			{
@@ -298,26 +321,27 @@ class Element
 		}
 };
 
-double x_where_mouse_was_pressed, y_where_mouse_was_pressed; //for dragging
+float x_where_mouse_was_pressed, y_where_mouse_was_pressed; //for dragging
 vector<Element*> dragged_elements; //(now)
 
-double Mouse_x, Mouse_y; //for drawing wire wich is just adding
+float Mouse_x, Mouse_y; //for drawing wire wich is just adding
 bool adding_wire = false, from_output; Element *first_element; int firstput_number;
 
 class Scheme
 {
 	private:
 		vector<Element*> elements;
-		vector<bool*> inputs, outputs;
 		bool captions_enabled;
 		int workspace_x, workspace_y, workspace_x_size, workspace_y_size;
 
 	public:
 		bool selecting,
 			 selecting_by_quad;
+		unsigned char *name;
 
-		Scheme(): captions_enabled(true), selecting(false), selecting_by_quad(false)
-		{}
+		Scheme(unsigned char *name_arg): 
+			captions_enabled(true), selecting(false), selecting_by_quad(false)
+		{ strcpy(&name, &name_arg); }
 
 		~Scheme()
 		{
@@ -331,7 +355,7 @@ class Scheme
 			workspace_y = y; workspace_y_size = y_size;
 		}
 
-		bool select_element(double mouse_x, double mouse_y)
+		bool select_element(float mouse_x, float mouse_y)
 		{
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
@@ -343,7 +367,7 @@ class Scheme
 			return false;
 		}
 
-		void select_elements(double mouse_x1, double mouse_y1, double mouse_x2, double mouse_y2)
+		void select_elements(float mouse_x1, float mouse_y1, float mouse_x2, float mouse_y2)
 		{
 			if (mouse_x1 > mouse_x2) swap(mouse_x1, mouse_x2);
 			if (mouse_y1 < mouse_y2) swap(mouse_y1, mouse_y2);
@@ -377,7 +401,7 @@ class Scheme
 
 		void clear_selection() { for (int i = 0; i < elements.size(); i++) elements[i]->unselect(); }
 
-		void add_element(Function *function, double x, double y, double x_size, double y_size, int inputs_number, int outputs_number, bool from_panel)
+		void add_element(Function *function, float x, float y, float x_size, float y_size, int inputs_number, int outputs_number, bool from_panel)
 		{
 			Element **element;
 			element = new Element*;
@@ -412,7 +436,7 @@ class Scheme
 			//wire which is adding now
 			if (adding_wire)
 			{
-				double from_x, from_y;
+				float from_x, from_y;
 				if (from_output)
 				{
 					from_x = first_element->x + first_element->x_size, 
@@ -423,7 +447,7 @@ class Scheme
 					from_x = first_element->x, 
 					from_y = first_element->y + first_element->inputs_step*(firstput_number+0.5);
 				}
-				double middle = (Mouse_x + from_x) / 2;
+				float middle = (Mouse_x + from_x) / 2;
 		
 				glLineWidth(7);
 				glColor3ub(0, 0, 0);
@@ -457,7 +481,7 @@ class Scheme
 			else captions_enabled = true;
 		}
 
-		bool try_to_drag_element(double mouse_x, double mouse_y)
+		bool try_to_drag_element(float mouse_x, float mouse_y)
 		{
 			
 			for (int i = 0; i < elements.size(); i++)
@@ -503,7 +527,7 @@ class Scheme
 
 		void release() { dragged_elements.clear(); }
 
-		bool try_to_change_input_value(double mouse_x, double mouse_y)
+		bool try_to_change_input_value(float mouse_x, float mouse_y)
 		{
 			for (int i = 0; i < elements.size(); i++)
 				if (mouse_x > elements[i]->x && mouse_x < elements[i]->x + elements[i]->x_size && mouse_y > elements[i]->y && mouse_y < elements[i]->y + elements[i]->y_size)
@@ -516,7 +540,7 @@ class Scheme
 			return false;
 		}
 
-		void finish_adding_wire(double mouse_x, double mouse_y)
+		void finish_adding_wire(float mouse_x, float mouse_y)
 		{
 			printf("finish adding wire\n");
 			for (int i = 0; i < elements.size(); i++)
@@ -562,7 +586,7 @@ class Scheme
 				}
 		}
 
-		bool try_to_add_wire(double mouse_x, double mouse_y)
+		bool try_to_add_wire(float mouse_x, float mouse_y)
 		{
 			printf("try_to_add_wire\n");
 			x_where_mouse_was_pressed = mouse_x;
@@ -593,7 +617,7 @@ class Scheme
 			return false;
 		}
 
-		void start_drag_field(double mouse_x, double mouse_y)
+		void start_drag_field(float mouse_x, float mouse_y)
 		{
 			x_where_mouse_was_pressed = mouse_x;
 			y_where_mouse_was_pressed = mouse_y;
@@ -606,5 +630,19 @@ class Scheme
 		}
 };
 
-vector<Scheme> tabs;
-Scheme *active_tab;
+Scheme *active_tab = NULL;
+vector<Scheme*> tabs;
+float tabs_step;
+
+float tabs_panel_size, 
+	  tabs_panel_size_in_pixels, 
+	  tabs_panel_border_y, 
+	  tabs_panel_text_y;
+
+void new_tab()
+{
+	tabs.push_back(new Scheme((unsigned char*)"Unnamed scheme"));
+	if (!active_tab) active_tab = tabs[tabs.size()-1];
+	tabs_step = (2*windowWidth-tabs_panel_size)/tabs.size();
+	tabs_render_needed = true;
+}

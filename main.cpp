@@ -6,7 +6,9 @@
 
 using namespace std;
 
-bool workspace_render_needed = true, panel_render_needed = true;
+bool workspace_render_needed = true, 
+	 panel_render_needed = true, 
+	 tabs_render_needed = true;
 
 #include "logic_functions.hpp"
 #include "engine.cpp"
@@ -37,8 +39,9 @@ int main(int argc, char **argv)
 	default_functions_base.add_function((unsigned char*)"NOT", NOT, 1, 1, 1, 1, (unsigned char *)"basic");
 
 	//sample tab
-	tabs.push_back(Scheme());
-	active_tab = &tabs[0];
+	new_tab();
+	new_tab();
+	new_tab();
 
 	//elements panel
 	Elements_Panel default_panel(&default_functions_base);
