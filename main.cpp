@@ -10,7 +10,7 @@ bool workspace_render_needed = true,
 	 panel_render_needed = true, 
 	 tabs_render_needed = true;
 
-#include "logic_functions.hpp"
+#include "logic_functions.cpp"
 #include "engine.cpp"
 #include "GUI.cpp"
 #include "keys.cpp"
